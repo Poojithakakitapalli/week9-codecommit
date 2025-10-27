@@ -1,0 +1,228 @@
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grocery Delivery App</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;padding:0;background:#f4f4f4;}
+header{background:#ff6347;color:white;padding:1rem;text-align:center;}
+header h1{margin:0;}
+nav{margin-top:0.5rem;}
+nav a{margin:0 1rem;color:white;text-decoration:none;font-weight:bold;cursor:pointer;}
+nav a:hover{text-decoration:underline;}
+.container{display:flex;flex-wrap:wrap;justify-content:center;padding:1rem;}
+.product{background:white;margin:1rem;padding:1rem;width:200px;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);position:relative;text-align:center;}
+.product img{width:100%;height:150px;object-fit:cover;border-radius:8px;}
+.discount{position:absolute;top:10px;left:10px;background:red;color:white;padding:0.3rem 0.5rem;border-radius:5px;font-size:12px;}
+button{margin-top:0.5rem;background:#ff6347;color:white;border:none;padding:0.5rem 1rem;border-radius:5px;cursor:pointer;}
+button:hover{background:#e5533d;}
+.cart,.payment-page,.login-page,.signup-page{max-width:400px;margin:2rem auto;background:white;padding:1rem;border-radius:8px;box-shadow:0 4px 8px rgba(0,0,0,0.2);display:none;}
+.cart h2,.payment-page h2,.login-page h2,.signup-page h2{text-align:center;}
+.cart-item{display:flex;justify-content:space-between;align-items:center;margin:0.5rem 0;}
+.cart-item img{width:50px;height:50px;object-fit:cover;border-radius:5px;margin-right:5px;}
+.cart-item div{flex:1;}
+#checkout{background:#32cd32;width:100%;margin-top:0.5rem;}
+#checkout:hover{background:#28a745;}
+.payment-page label{display:block;margin-top:1rem;}
+.payment-page input,.payment-page select,.login-page input,.signup-page input{width:100%;padding:0.5rem;margin-top:0.3rem;}
+.payment-page button,.login-page button,.signup-page button{margin-top:1rem;width:100%;background:#32cd32;color:white;border:none;padding:0.7rem;border-radius:5px;cursor:pointer;}
+.payment-page button:hover,.login-page button:hover,.signup-page button:hover{background:#28a745;}
+#notification{position:fixed;top:20px;right:20px;background:#32cd32;color:white;padding:1rem 1.5rem;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.2);display:none;z-index:1000;}
+.header-after-login{display:none;}
+.quantity-btn{background:#ff6347;color:white;border:none;padding:0.3rem 0.5rem;margin:0 2px;border-radius:3px;cursor:pointer;}
+.quantity-btn:hover{background:#e5533d;}
+</style>
+</head>
+<body>
+
+<header id="header">
+  <h1>Grocery Delivery App</h1>
+  <nav id="navBeforeLogin">
+    
+    <a onclick="showPage('login')">Login</a>
+    <a onclick="showPage('signup')">Signup</a>
+  </nav>
+  <nav id="navAfterLogin" class="header-after-login">
+    <a onclick="showPage('products')">Products</a>
+    <a onclick="showPage('cart')">Cart <span id="cartCount">0</span></a>
+    <a onclick="logout()">Profile/Logout</a>
+  </nav>
+</header>
+
+<div id="notification">Added to Cart!</div>
+
+<!-- Pages -->
+<div class="login-page" id="loginPage">
+  <h2>Login</h2>
+  <input type="email" id="loginEmail" placeholder="Email">
+  <input type="password" id="loginPassword" placeholder="Password">
+  <button onclick="login()">Login</button>
+</div>
+
+<div class="signup-page" id="signupPage">
+  <h2>Signup</h2>
+  <input type="text" id="signupName" placeholder="Name">
+  <input type="email" id="signupEmail" placeholder="Email">
+  <input type="password" id="signupPassword" placeholder="Password">
+  <button onclick="signup()">Signup</button>
+</div>
+
+<div class="container" id="products"></div>
+
+<div class="cart" id="cartDiv">
+  <h2>Cart</h2>
+  <div id="cartItems"></div>
+  <div id="total"></div>
+  <label>Choose Delivery Slot</label>
+  <select id="deliverySlot">
+    <option value="9AM-12PM">9AM-12PM</option>
+    <option value="12PM-3PM">12PM-3PM</option>
+    <option value="3PM-6PM">3PM-6PM</option>
+    <option value="6PM-9PM">6PM-9PM</option>
+  </select>
+  <button id="checkout">Proceed to Payment</button>
+</div>
+
+<div class="payment-page" id="paymentPage">
+  <h2>Payment</h2>
+  <p id="paymentTotal"></p>
+  <p id="deliveryInfo"></p>
+  <label>Name on Card</label>
+  <input type="text" id="name" placeholder="Enter your name">
+  <label>Card Number</label>
+  <input type="text" id="card" placeholder="XXXX-XXXX-XXXX-XXXX">
+  <label>Payment Method</label>
+  <select id="method">
+    <option value="Credit Card">Credit Card</option>
+    <option value="Debit Card">Debit Card</option>
+    <option value="UPI">UPI</option>
+    <option value="Cash on Delivery">Cash on Delivery</option>
+  </select>
+  <button id="payNow">Pay Now</button>
+</div>
+
+<script>
+let users = [];
+let currentUser = null;
+let cart = [];
+const products = [
+  { id:1, name:"Apple", price:50, discount:10, img:"https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=200&q=80" },
+  { id:2, name:"Banana", price:20, discount:5, img:"https://th.bing.com/th/id/R.805f607b3339a78a4f48083a7b1c140a?rik=drK97a2hINwsOQ&riu=http%3a%2f%2fwww.clipartbest.com%2fcliparts%2fLiK%2fA66%2fLiKA66Xia.jpeg&ehk=hUevbsSStxGHrWqtFMIt%2f0EZl0hXVqgzGsl4b0%2bA9ao%3d&risl=&pid=ImgRaw&r=0" },
+  { id:3, name:"Milk", price:35, discount:0, img:"https://instamart-media-assets.swiggy.com/swiggy/image/upload/fl_lossy,f_auto,q_auto,h_544,w_504/55832205672c90f343587b3675b64dfa" }
+];
+
+function showPage(page){
+  document.getElementById("loginPage").style.display="none";
+  document.getElementById("signupPage").style.display="none";
+  document.getElementById("products").style.display="none";
+  document.getElementById("cartDiv").style.display="none";
+  document.getElementById("paymentPage").style.display="none";
+  if(page=="login") document.getElementById("loginPage").style.display="block";
+  else if(page=="signup") document.getElementById("signupPage").style.display="block";
+  else if(page=="products") document.getElementById("products").style.display="flex";
+  else if(page=="cart") document.getElementById("cartDiv").style.display="block";
+}
+
+function signup(){
+  const name=document.getElementById("signupName").value;
+  const email=document.getElementById("signupEmail").value;
+  const pass=document.getElementById("signupPassword").value;
+  if(!name||!email||!pass){ alert("Fill all fields"); return; }
+  users.push({name,email,pass});
+  alert("Signup successful");
+  showPage("login");
+}
+
+function login(){
+  const email=document.getElementById("loginEmail").value;
+  const pass=document.getElementById("loginPassword").value;
+  const user = users.find(u=>u.email===email && u.pass===pass);
+  if(!user){ alert("Invalid credentials"); return; }
+  currentUser=user;
+  document.getElementById("navBeforeLogin").style.display="none";
+  document.getElementById("navAfterLogin").style.display="block";
+  showPage("products");
+  displayProducts();
+}
+
+function logout(){
+  currentUser=null;
+  cart=[];
+  document.getElementById("navBeforeLogin").style.display="block";
+  document.getElementById("navAfterLogin").style.display="none";
+  showPage("login");
+}
+
+function displayProducts(){
+  const productsDiv=document.getElementById("products");
+  productsDiv.innerHTML="";
+  products.forEach(p=>{
+    const div=document.createElement("div");
+    div.className="product";
+    div.innerHTML=`
+      ${p.discount>0?`<div class="discount">${p.discount}% OFF</div>`:""}
+      <img src="${p.img}" alt="${p.name}">
+      <h3>${p.name}</h3>
+      <p>₹${p.price-Math.round(p.price*p.discount/100)}</p>
+      <button onclick="addToCart(${p.id})">Add to Cart</button>
+    `;
+    productsDiv.appendChild(div);
+  });
+}
+
+function addToCart(id){
+  const item=products.find(p=>p.id===id);
+  const exist=cart.find(c=>c.id===id);
+  if(exist) exist.qty++;
+  else cart.push({...item,qty:1});
+  updateCart();
+  showNotification();
+}
+
+function updateCart(){
+  const cartItems=document.getElementById("cartItems");
+  cartItems.innerHTML="";
+  let total=0;
+  cart.forEach(c=>{
+    const price=c.price-Math.round(c.price*c.discount/100);
+    total+=price*c.qty;
+    const div=document.createElement("div");
+    div.className="cart-item";
+    div.innerHTML=`<img src="${c.img}"><div>${c.name}</div><div>
+    <button class="quantity-btn" onclick="decreaseQty(${c.id})">-</button>
+    ${c.qty}
+    <button class="quantity-btn" onclick="increaseQty(${c.id})">+</button>
+    </div>₹${price*c.qty} <button onclick="removeItem(${c.id})">x</button>`;
+    cartItems.appendChild(div);
+  });
+  document.getElementById("total").innerText=`Total: ₹${total}`;
+  document.getElementById("cartCount").innerText=cart.reduce((sum,c)=>sum+c.qty,0);
+}
+
+function removeItem(id){cart=cart.filter(c=>c.id!==id);updateCart();}
+function increaseQty(id){cart.find(c=>c.id===id).qty++;updateCart();}
+function decreaseQty(id){const c=cart.find(c=>c.id===id);if(c.qty>1)c.qty--;else removeItem(id);updateCart();}
+function showNotification(){const n=document.getElementById("notification");n.style.display="block";setTimeout(()=>{n.style.display="none"},1500);}
+
+document.getElementById("checkout").onclick=()=>{
+  if(cart.length===0){alert("Cart empty");return;}
+  document.getElementById("cartDiv").style.display="none";
+  document.getElementById("paymentPage").style.display="block";
+  const total=cart.  reduce((sum,c)=>sum+(c.price-Math.round(c.price*c.discount/100))*c.qty,0);
+  document.getElementById("paymentTotal").innerText=`Total Amount: ₹${total}`;
+  const slot=document.getElementById("deliverySlot").value;
+  document.getElementById("deliveryInfo").innerText=`Delivery Slot: ${slot}`;
+};
+
+document.getElementById("payNow").onclick=()=>{
+  const name=document.getElementById("name").value;
+  const card=document.getElementById("card").value;
+  const method=document.getElementById("method").value;
+  if(!name||!card){alert("Fill payment details");return;}
+  alert(`Payment successful!\nMethod: ${method}\nThank you ${currentUser.name}!\nYour items will be delivered in chosen slot.`);
+  logout();
+};
+</script>
+
+</body>
+</html>
