@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Content Management System</title>
+
+<!-- React + Babel -->
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<!-- jQuery + jQuery UI -->
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css" />
+
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+.draggable {
+  position: absolute;
+  cursor: move;
+}
+.ui-resizable-handle {
+  background: rgba(0,0,0,0.15);
+}
+</style>
+</head>
+<body class="bg-[#f8f5f1]">
+<div id="root"></div>
+
+<script type="text/babel">
+function CMSApp() {
+  const [blocks, setBlocks] = React.useState([]);
+  const [textColor, setTextColor] = React.useState("#333333");
+  const [newText, setNewText] = React.useState("");
+  const fileInputImage = React.useRef();
+  const fileInputVideo = React.useRef();
+
+  const makeDraggableResizable = (id) => {
+    $(`#${id}`).draggable({ containment: "parent" }).resizable({
+      aspectRatio: false,
+      handles: "n, e, s, w, ne, nw, se, sw"
+    });
+  };
+
+  const addTextBlock = () => {
+    if (newText.trim() !== "") {
+      const id = "block-" + Date.now();
+      setBlocks([...blocks, { id, type: "text", content: newText, color: textColor }]);
+      setTimeout(() => makeDraggableResizable(id), 0); // Initialize after render
+      setNewText("");
+    }
+  };
+
+  const handleFileUpload = (type, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const id = "block-" + Date.now();
+      if (type === "image") setBlocks([...blocks, { id, type: "image", src: event.target.result }]);
+      if (type === "video") setBlocks([...blocks, { id, type: "video", src: event.target.result }]);
+      setTimeout(() => makeDraggableResizable(id), 0);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const renderBlock = (block) => {
+    const baseStyle = { top: "20px", left: "20px", minWidth: "100px" };
+    if (block.type === "text") {
+      return (
+        <div
+          key={block.id}
+          id={block.id}
+          className="absolute bg-white shadow-lg p-2 border rounded draggable"
+          contentEditable
+          suppressContentEditableWarning
+          style={{ ...baseStyle, color: block.color }}
+        >
+          {block.content}
+        </div>
+      );
+    }
+    if (block.type === "image") {
+      return (
+        <img
+          key={block.id}
+          id={block.id}
+          src={block.src}
+          className="absolute border rounded-lg draggable shadow-md"
+          style={{ width: "200px", ...baseStyle }}
+        />
+      );
+    }
+    if (block.type === "video") {
+      return (
+        <video
+          key={block.id}
+          id={block.id}
+          controls
+          className="absolute border rounded-lg draggable shadow-md"
+          style={{ width: "250px", ...baseStyle }}
+          src={block.src}
+        ></video>
+      );
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-screen">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-[#f8cdda] to-[#1d2b64] text-white py-4 text-center shadow-md">
+        <h1 className="text-3xl font-bold tracking-wide">
+          Content <span className="text-yellow-200">Management System</span>
+        </h1>
+        <p className="text-sm opacity-80">Drag, resize, and customize content freely ✨</p>
+      </div>
+
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <div className="md:w-1/4 w-full bg-[#dfe7fd] text-gray-800 p-4 space-y-4 overflow-auto">
+          <h2 className="text-lg font-semibold text-center text-[#1d2b64]">Add Blocks</h2>
+
+          <div className="bg-[#f8f9ff] border border-[#ccd3ff] p-3 rounded-lg shadow-sm">
+            <label className="block text-sm mb-1 font-medium">Enter Text:</label>
+            <textarea
+              value={newText}
+              onChange={(e) => setNewText(e.target.value)}
+              className="w-full p-2 text-black rounded mb-2 border border-[#ccd3ff]"
+              rows="2"
+              placeholder="Type your text here..."
+            />
+            <label className="block text-sm mb-1 font-medium">Text Color:</label>
+            <input
+              type="color"
+              value={textColor}
+              onChange={(e) => setTextColor(e.target.value)}
+              className="mb-3"
+            />
+            <button
+              onClick={addTextBlock}
+              className="w-full bg-[#a3c4f3] hover:bg-[#8ab0ec] text-[#1d2b64] font-medium rounded p-2 transition"
+            >
+              Add Text
+            </button>
+          </div>
+
+          <div className="bg-[#f8f9ff] border border-[#ccd3ff] p-3 rounded-lg shadow-sm">
+            <label className="block text-sm mb-2 font-medium">Upload Image:</label>
+            <input
+              ref={fileInputImage}
+              type="file"
+              accept="image/*"
+              onChange={(e) => handleFileUpload("image", e)}
+              className="w-full text-sm text-gray-700"
+            />
+          </div>
+
+          <div className="bg-[#f8f9ff] border border-[#ccd3ff] p-3 rounded-lg shadow-sm">
+            <label className="block text-sm mb-2 font-medium">Upload Video:</label>
+            <input
+              ref={fileInputVideo}
+              type="file"
+              accept="video/*"
+              onChange={(e) => handleFileUpload("video", e)}
+              className="w-full text-sm text-gray-700"
+            />
+          </div>
+        </div>
+
+        {/* Canvas */}
+        <div className="flex-1 bg-[#fefcff] relative overflow-auto p-2">
+          <div className="border-2 border-dashed border-[#a3c4f3] rounded bg-white w-full h-full relative shadow-inner">
+            {blocks.length === 0 && (
+              <p className="text-gray-400 text-center mt-20 text-sm">
+                Add text, image, or video — drag them anywhere freely ✏️
+              </p>
+            )}
+            {blocks.map((block) => renderBlock(block))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<CMSApp />);
+</script>
+</body>
+</html>
